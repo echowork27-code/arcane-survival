@@ -24,6 +24,18 @@ class TelegramManager {
   hapticImpact(s = 'medium') { try { this.webapp?.HapticFeedback?.impactOccurred(s); } catch {} }
   hapticNotify(t = 'success'){ try { this.webapp?.HapticFeedback?.notificationOccurred(t); } catch {} }
   hapticSelect()             { try { this.webapp?.HapticFeedback?.selectionChanged(); } catch {} }
+  hapticFeedback(type = 'medium') {
+    switch (type) {
+      case 'light': case 'medium': case 'heavy':
+        this.hapticImpact(type); break;
+      case 'success': case 'error': case 'warning':
+        this.hapticNotify(type); break;
+      case 'impact':
+        this.hapticImpact('medium'); break;
+      default:
+        this.hapticSelect(); break;
+    }
+  }
   shareScore(score, wave) {
     if (!this.isAvailable) return;
     const t = `⚔️ I survived ${wave} waves and scored ${score} in Arcane Survival! Can you surpass me?`;

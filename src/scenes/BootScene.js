@@ -6,27 +6,155 @@ export default class BootScene extends Phaser.Scene {
 
   preload() {
     const { width, height } = this.cameras.main;
-    this.add.rectangle(width / 2, height / 2, width, height, COLORS.darkBlue);
 
-    const fw = 300, fh = 40;
-    this.add.rectangle(width / 2, height / 2, fw + 10, fh + 10, COLORS.gold, 0.3);
-    const bg = this.add.rectangle(width / 2, height / 2, fw, fh, COLORS.deepPurple);
-    bg.setStrokeStyle(2, COLORS.gold);
-    const bar = this.add.rectangle(width / 2 - fw / 2 + 5, height / 2, 0, fh - 10, COLORS.gold);
-    bar.setOrigin(0, 0.5);
+    // Deep dark background
+    this.add.rectangle(width / 2, height / 2, width, height, 0x0A0A1E);
 
-    this.add.text(width / 2, height / 2 - 50, 'Channeling Magic...', {
-      fontFamily: 'Cinzel, serif', fontSize: '24px', color: '#D4AF37',
-    }).setOrigin(0.5);
+    // Vignette overlay
+    const vig = this.add.graphics();
+    for (let i = 0; i < 6; i++) {
+      vig.fillStyle(0x000000, 0.12 - i * 0.015);
+      vig.fillRect(0, 0, width, 30 - i * 4);
+      vig.fillRect(0, height - (30 - i * 4), width, 30 - i * 4);
+      vig.fillRect(0, 0, 30 - i * 4, height);
+      vig.fillRect(width - (30 - i * 4), 0, 30 - i * 4, height);
+    }
+    vig.setDepth(20);
 
-    this.load.on('progress', (v) => { bar.width = (fw - 10) * v; });
+    // Animated rune circle in center
+    this.runeCircle = this.add.graphics();
+    this._drawRuneCircle(this.runeCircle, width / 2, height / 2, 120);
+    this.runeCircle.setAlpha(0.3);
+    this.tweens.add({ targets: this.runeCircle, angle: 360, duration: 20000, repeat: -1 });
+    this.tweens.add({ targets: this.runeCircle, alpha: 0.5, duration: 2000, yoyo: true, repeat: -1 });
 
-    for (let i = 0; i < 8; i++) {
-      const s = this.add.circle(width / 2 + Phaser.Math.Between(-150, 150), height / 2 + Phaser.Math.Between(-30, 30), Phaser.Math.Between(2, 4), COLORS.gold, 0.6);
-      this.tweens.add({ targets: s, y: s.y - 20, alpha: 0, duration: 1500, delay: i * 200, repeat: -1, yoyo: true });
+    // Inner rune circle (counter-rotating)
+    this.innerRune = this.add.graphics();
+    this._drawRuneCircle(this.innerRune, width / 2, height / 2, 70, 6, COLORS.cyan);
+    this.innerRune.setAlpha(0.2);
+    this.tweens.add({ targets: this.innerRune, angle: -360, duration: 15000, repeat: -1 });
+    this.tweens.add({ targets: this.innerRune, alpha: 0.35, duration: 1500, yoyo: true, repeat: -1, delay: 500 });
+
+    // Title text
+    this.add.text(width / 2, height / 2 - 70, 'Channeling Magic...', {
+      fontFamily: 'Cinzel, serif', fontSize: '26px', color: '#D4AF37',
+      stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(10);
+
+    // Subtitle
+    const sub = this.add.text(width / 2, height / 2 - 42, 'Preparing the arcane wards', {
+      fontFamily: 'Crimson Text, serif', fontSize: '13px', fontStyle: 'italic', color: '#7A6E8A',
+    }).setOrigin(0.5).setDepth(10);
+    this.tweens.add({ targets: sub, alpha: 0.4, duration: 1500, yoyo: true, repeat: -1 });
+
+    // Loading bar
+    const fw = 260, fh = 12;
+    const barBg = this.add.graphics();
+    barBg.fillStyle(0x1A0A2E, 0.8);
+    barBg.fillRoundedRect(width / 2 - fw / 2 - 4, height / 2 + 20 - fh / 2 - 4, fw + 8, fh + 8, 6);
+    barBg.lineStyle(1, COLORS.gold, 0.5);
+    barBg.strokeRoundedRect(width / 2 - fw / 2 - 4, height / 2 + 20 - fh / 2 - 4, fw + 8, fh + 8, 6);
+    barBg.setDepth(10);
+
+    const barInner = this.add.graphics();
+    barInner.fillStyle(0x0D0D2B, 0.9);
+    barInner.fillRoundedRect(width / 2 - fw / 2, height / 2 + 20 - fh / 2, fw, fh, 4);
+    barInner.setDepth(10);
+
+    this.loadBar = this.add.graphics().setDepth(11);
+    this.loadBarX = width / 2 - fw / 2 + 2;
+    this.loadBarY = height / 2 + 20 - fh / 2 + 2;
+    this.loadBarW = fw - 4;
+    this.loadBarH = fh - 4;
+
+    // Progress listener
+    this.load.on('progress', (v) => {
+      this.loadBar.clear();
+      // Gold fill with gradient effect
+      this.loadBar.fillStyle(COLORS.gold, 0.9);
+      this.loadBar.fillRoundedRect(this.loadBarX, this.loadBarY, this.loadBarW * v, this.loadBarH, 3);
+      // Bright highlight line on top
+      this.loadBar.fillStyle(0xFFE066, 0.5);
+      this.loadBar.fillRect(this.loadBarX, this.loadBarY, this.loadBarW * v, 2);
+    });
+
+    // Floating rune sigils around the screen
+    const runeSymbols = ['ᚠ', 'ᚢ', 'ᚦ', 'ᚨ', 'ᚱ', 'ᚲ', 'ᚷ', 'ᚹ', 'ᚺ', 'ᚾ', 'ᛁ', 'ᛃ'];
+    for (let i = 0; i < 16; i++) {
+      const rx = Phaser.Math.Between(40, width - 40);
+      const ry = Phaser.Math.Between(40, height - 40);
+      const rune = this.add.text(rx, ry, Phaser.Utils.Array.GetRandom(runeSymbols), {
+        fontFamily: 'serif', fontSize: Phaser.Math.Between(14, 24) + 'px',
+        color: i % 3 === 0 ? '#4ECDC4' : '#D4AF37',
+      }).setOrigin(0.5).setAlpha(0);
+
+      this.tweens.add({
+        targets: rune,
+        alpha: { from: 0, to: Phaser.Math.FloatBetween(0.1, 0.35) },
+        y: ry - Phaser.Math.Between(20, 50),
+        duration: Phaser.Math.Between(2000, 4000),
+        delay: Phaser.Math.Between(0, 3000),
+        repeat: -1,
+        yoyo: true,
+        ease: 'Sine.easeInOut',
+      });
+    }
+
+    // Ambient particles (sparkles)
+    for (let i = 0; i < 20; i++) {
+      const px = Phaser.Math.Between(0, width);
+      const py = Phaser.Math.Between(0, height);
+      const p = this.add.circle(px, py, Phaser.Math.Between(1, 2),
+        i % 2 === 0 ? COLORS.gold : COLORS.cyan, 0);
+      this.tweens.add({
+        targets: p,
+        alpha: { from: 0, to: Phaser.Math.FloatBetween(0.2, 0.6) },
+        y: py - Phaser.Math.Between(30, 80),
+        duration: Phaser.Math.Between(2000, 5000),
+        delay: Phaser.Math.Between(0, 2000),
+        repeat: -1,
+        onRepeat: () => {
+          p.x = Phaser.Math.Between(0, width);
+          p.y = Phaser.Math.Between(height * 0.3, height);
+        },
+      });
     }
 
     this.generateAssets();
+  }
+
+  _drawRuneCircle(g, cx, cy, radius, segments = 12, color = COLORS.gold) {
+    g.lineStyle(1, color, 0.6);
+    g.strokeCircle(cx, cy, radius);
+    g.lineStyle(1, color, 0.3);
+    g.strokeCircle(cx, cy, radius * 0.8);
+
+    // Dots at intervals
+    for (let i = 0; i < segments; i++) {
+      const a = (i / segments) * Math.PI * 2;
+      const x = cx + Math.cos(a) * radius;
+      const y = cy + Math.sin(a) * radius;
+      g.fillStyle(color, 0.7);
+      g.fillCircle(x, y, 3);
+
+      // Connect every other dot to center with faint lines
+      if (i % 2 === 0) {
+        g.lineStyle(1, color, 0.15);
+        g.beginPath();
+        g.moveTo(cx, cy);
+        g.lineTo(x, y);
+        g.strokePath();
+      }
+    }
+
+    // Small inner decorations
+    for (let i = 0; i < segments / 2; i++) {
+      const a = (i / (segments / 2)) * Math.PI * 2 + Math.PI / segments;
+      const x = cx + Math.cos(a) * radius * 0.55;
+      const y = cy + Math.sin(a) * radius * 0.55;
+      g.fillStyle(color, 0.4);
+      g.fillCircle(x, y, 2);
+    }
   }
 
   generateAssets() {
@@ -105,7 +233,6 @@ export default class BootScene extends Phaser.Scene {
     g.fillStyle(COLORS.deepPurple, 0.6); g.fillCircle(40, 40, 40);
     g.lineStyle(3, COLORS.gold, 0.8); g.strokeCircle(40, 40, 38);
     g.lineStyle(2, COLORS.cyan, 0.6); g.strokeCircle(40, 40, 26);
-    // Draw a 5-pointed star manually (fillStar doesn't exist in Phaser 3.90)
     g.fillStyle(COLORS.cyan, 0.8);
     g.beginPath();
     for (let i = 0; i < 10; i++) {

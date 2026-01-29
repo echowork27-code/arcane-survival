@@ -56,73 +56,236 @@ export default class GameScene extends Phaser.Scene {
   createArena() {
     const { width, height } = this.cameras.main;
     const pad = GAME_CONFIG.arena.padding;
-    this.add.rectangle(width / 2, height / 2, width, height, COLORS.darkBlue);
 
+    // Deep dark background
+    this.add.rectangle(width / 2, height / 2, width, height, 0x0A0A1E);
+
+    // Subtle radial ambience
+    const bgGlow = this.add.graphics();
+    bgGlow.fillStyle(0x1A0A2E, 0.4);
+    bgGlow.fillCircle(width / 2, height / 2, 280);
+    bgGlow.fillStyle(0x2D1B4E, 0.1);
+    bgGlow.fillCircle(width / 2, height / 2, 180);
+
+    // Floor tiles
     const g = this.add.graphics();
-    g.fillStyle(COLORS.deepPurple, 0.3);
+    g.fillStyle(COLORS.deepPurple, 0.2);
     for (let x = pad; x < width - pad; x += 40) {
-      for (let y = pad; y < height - pad; y += 40) { g.fillRect(x + 1, y + 1, 38, 38); }
+      for (let y = pad; y < height - pad; y += 40) {
+        g.fillRect(x + 1, y + 1, 38, 38);
+      }
     }
-    g.lineStyle(4, COLORS.gold, 0.8);
-    g.strokeRect(pad, pad, width - pad * 2, height - pad * 2);
-    g.lineStyle(2, COLORS.cyan, 0.3);
-    g.strokeCircle(width / 2, height / 2, 150);
-    g.strokeCircle(width / 2, height / 2, 100);
+    // Faint grid lines
+    g.lineStyle(1, COLORS.deepPurple, 0.12);
+    for (let x = pad; x <= width - pad; x += 40) {
+      g.beginPath(); g.moveTo(x, pad); g.lineTo(x, height - pad); g.strokePath();
+    }
+    for (let y = pad; y <= height - pad; y += 40) {
+      g.beginPath(); g.moveTo(pad, y); g.lineTo(width - pad, y); g.strokePath();
+    }
 
-    [{ x: pad + 30, y: pad + 30 }, { x: width - pad - 30, y: pad + 30 },
-     { x: pad + 30, y: height - pad - 30 }, { x: width - pad - 30, y: height - pad - 30 }].forEach(pos => {
-      g.fillStyle(COLORS.gold, 0.5); g.fillCircle(pos.x, pos.y, 8);
-      g.lineStyle(1, COLORS.gold, 0.3); g.strokeCircle(pos.x, pos.y, 15);
+    // Arena border — double line with glow
+    const border = this.add.graphics();
+    // Outer glow
+    border.lineStyle(6, COLORS.gold, 0.1);
+    border.strokeRect(pad - 2, pad - 2, width - pad * 2 + 4, height - pad * 2 + 4);
+    // Main border
+    border.lineStyle(3, COLORS.gold, 0.7);
+    border.strokeRect(pad, pad, width - pad * 2, height - pad * 2);
+    // Inner border
+    border.lineStyle(1, COLORS.gold, 0.25);
+    border.strokeRect(pad + 4, pad + 4, width - pad * 2 - 8, height - pad * 2 - 8);
+
+    // Center magic circles
+    const centerG = this.add.graphics();
+    centerG.lineStyle(1, COLORS.cyan, 0.15);
+    centerG.strokeCircle(width / 2, height / 2, 150);
+    centerG.lineStyle(1, COLORS.cyan, 0.1);
+    centerG.strokeCircle(width / 2, height / 2, 100);
+    centerG.lineStyle(1, COLORS.gold, 0.06);
+    centerG.strokeCircle(width / 2, height / 2, 50);
+    // Center cross
+    centerG.lineStyle(1, COLORS.cyan, 0.06);
+    centerG.beginPath(); centerG.moveTo(width / 2 - 20, height / 2); centerG.lineTo(width / 2 + 20, height / 2); centerG.strokePath();
+    centerG.beginPath(); centerG.moveTo(width / 2, height / 2 - 20); centerG.lineTo(width / 2, height / 2 + 20); centerG.strokePath();
+
+    // === TORCH EFFECTS IN CORNERS ===
+    const torchPositions = [
+      { x: pad + 20, y: pad + 20 },
+      { x: width - pad - 20, y: pad + 20 },
+      { x: pad + 20, y: height - pad - 20 },
+      { x: width - pad - 20, y: height - pad - 20 },
+    ];
+
+    torchPositions.forEach(pos => {
+      // Torch base glow (warm radial)
+      const glow = this.add.circle(pos.x, pos.y, 35, 0xFF8844, 0.06).setDepth(0);
+      this.tweens.add({
+        targets: glow, alpha: { from: 0.04, to: 0.1 }, scale: { from: 0.9, to: 1.15 },
+        duration: Phaser.Math.Between(800, 1200), yoyo: true, repeat: -1, ease: 'Sine.easeInOut',
+      });
+
+      // Torch bright core
+      const core = this.add.circle(pos.x, pos.y, 6, COLORS.gold, 0.6).setDepth(1);
+      this.tweens.add({
+        targets: core, alpha: { from: 0.4, to: 0.8 }, scale: { from: 0.8, to: 1.2 },
+        duration: Phaser.Math.Between(400, 700), yoyo: true, repeat: -1,
+      });
+
+      // Flickering embers from torch
+      for (let i = 0; i < 3; i++) {
+        const ember = this.add.circle(pos.x, pos.y, 1, 0xFFAA44, 0.5).setDepth(1);
+        this.tweens.add({
+          targets: ember,
+          x: pos.x + Phaser.Math.Between(-12, 12),
+          y: pos.y - Phaser.Math.Between(10, 30),
+          alpha: 0,
+          duration: Phaser.Math.Between(600, 1200),
+          delay: Phaser.Math.Between(0, 1000),
+          repeat: -1,
+          onRepeat: () => { ember.x = pos.x; ember.y = pos.y; ember.alpha = 0.5; },
+        });
+      }
+
+      // Outer ring decoration
+      border.lineStyle(1, COLORS.gold, 0.3);
+      border.strokeCircle(pos.x, pos.y, 12);
     });
 
-    for (let i = 0; i < 5; i++) {
+    // === WALL GLOW (subtle) ===
+    const wallGlow = this.add.graphics().setDepth(0);
+    // Top wall glow
+    wallGlow.fillStyle(COLORS.gold, 0.03);
+    wallGlow.fillRect(pad, pad, width - pad * 2, 15);
+    // Bottom wall glow
+    wallGlow.fillRect(pad, height - pad - 15, width - pad * 2, 15);
+    // Left wall glow
+    wallGlow.fillRect(pad, pad, 15, height - pad * 2);
+    // Right wall glow
+    wallGlow.fillRect(width - pad - 15, pad, 15, height - pad * 2);
+
+    // === FOG ===
+    for (let i = 0; i < 8; i++) {
       const fog = this.add.ellipse(
-        Phaser.Math.Between(pad, width - pad), Phaser.Math.Between(pad, height - pad),
-        Phaser.Math.Between(100, 200), Phaser.Math.Between(50, 100), COLORS.deepPurple, 0.15
-      );
-      this.tweens.add({ targets: fog, x: fog.x + Phaser.Math.Between(-50, 50), alpha: Phaser.Math.FloatBetween(0.1, 0.2), duration: Phaser.Math.Between(4000, 8000), yoyo: true, repeat: -1 });
+        Phaser.Math.Between(pad, width - pad),
+        Phaser.Math.Between(pad, height - pad),
+        Phaser.Math.Between(80, 200),
+        Phaser.Math.Between(30, 80),
+        i % 3 === 0 ? 0x4ECDC4 : COLORS.deepPurple,
+        i % 3 === 0 ? 0.015 : 0.08
+      ).setDepth(0);
+
+      this.tweens.add({
+        targets: fog,
+        x: fog.x + Phaser.Math.Between(-60, 60),
+        alpha: { from: fog.alpha, to: fog.alpha * Phaser.Math.FloatBetween(0.3, 1.5) },
+        scaleX: Phaser.Math.FloatBetween(0.7, 1.4),
+        duration: Phaser.Math.Between(5000, 10000),
+        yoyo: true, repeat: -1,
+        ease: 'Sine.easeInOut',
+        delay: Phaser.Math.Between(0, 3000),
+      });
     }
+
     this.arenaBounds = { left: pad, right: width - pad, top: pad, bottom: height - pad };
   }
 
   createUI() {
-    const { width, height } = this.cameras.main;
-    const topBar = this.add.graphics();
-    topBar.fillStyle(COLORS.darkBlue, 0.8); topBar.fillRect(0, 0, width, 35);
-    topBar.lineStyle(1, COLORS.gold, 0.5); topBar.moveTo(0, 35); topBar.lineTo(width, 35); topBar.strokePath();
-    topBar.setScrollFactor(0).setDepth(100);
+    const { width } = this.cameras.main;
 
-    this.waveText = this.add.text(20, 8, 'Wave ' + this.wave, {
-      fontFamily: 'Cinzel, serif', fontSize: '16px', color: '#4ECDC4',
-    }).setScrollFactor(0).setDepth(100);
+    // === ORNATE TOP BAR ===
+    const topBar = this.add.graphics().setScrollFactor(0).setDepth(100);
+    // Main bar background
+    topBar.fillStyle(0x0A0A1E, 0.9);
+    topBar.fillRect(0, 0, width, 38);
+    // Bottom border — double line
+    topBar.lineStyle(2, COLORS.gold, 0.6);
+    topBar.beginPath(); topBar.moveTo(0, 38); topBar.lineTo(width, 38); topBar.strokePath();
+    topBar.lineStyle(1, COLORS.gold, 0.2);
+    topBar.beginPath(); topBar.moveTo(0, 36); topBar.lineTo(width, 36); topBar.strokePath();
+    // Subtle inner glow line at top
+    topBar.fillStyle(COLORS.deepPurple, 0.4);
+    topBar.fillRect(0, 0, width, 3);
 
-    this.scoreText = this.add.text(width / 2, 8, 'Score: 0', {
-      fontFamily: 'Cinzel, serif', fontSize: '18px', color: '#D4AF37',
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100);
+    // Decorative corner accents on bar
+    topBar.fillStyle(COLORS.gold, 0.5);
+    // Left diamond
+    topBar.beginPath();
+    topBar.moveTo(8, 19); topBar.lineTo(11, 16); topBar.lineTo(14, 19);
+    topBar.lineTo(11, 22); topBar.closePath(); topBar.fillPath();
+    // Right diamond
+    topBar.beginPath();
+    topBar.moveTo(width - 8, 19); topBar.lineTo(width - 5, 16); topBar.lineTo(width - 2, 19);
+    topBar.lineTo(width - 5, 22); topBar.closePath(); topBar.fillPath();
 
-    this.comboText = this.add.text(width / 2, 26, '', {
-      fontFamily: 'Cinzel, serif', fontSize: '12px', color: '#FF6B35',
-    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(100).setAlpha(0);
+    // Section dividers
+    topBar.lineStyle(1, COLORS.gold, 0.2);
+    topBar.beginPath(); topBar.moveTo(140, 6); topBar.lineTo(140, 32); topBar.strokePath();
+    topBar.beginPath(); topBar.moveTo(width - 180, 6); topBar.lineTo(width - 180, 32); topBar.strokePath();
 
-    const hx = width - 130, hy = 22;
-    this.healthBarBg = this.add.rectangle(hx, hy, 100, 10, 0x333333).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
-    this.healthBar = this.add.rectangle(hx, hy, 100, 10, 0x44FF44).setOrigin(0, 0.5).setScrollFactor(0).setDepth(100);
-    const hb = this.add.graphics();
-    hb.lineStyle(1, COLORS.gold, 0.8); hb.strokeRect(hx - 1, hy - 6, 102, 12);
-    hb.setScrollFactor(0).setDepth(100);
+    // Wave text
+    this.waveText = this.add.text(22, 10, 'Wave ' + this.wave, {
+      fontFamily: 'Cinzel, serif', fontSize: '15px', color: '#4ECDC4',
+      stroke: '#0A0A1E', strokeThickness: 2,
+    }).setScrollFactor(0).setDepth(101);
 
-    this.spellIndicator = this.add.text(width - 20, 8, this.getSpellName(), {
-      fontFamily: 'Cinzel, serif', fontSize: '14px', color: this.getSpellColor(),
-    }).setOrigin(1, 0).setScrollFactor(0).setDepth(100);
+    // Score text (centered)
+    this.scoreText = this.add.text(width / 2, 10, 'Score: 0', {
+      fontFamily: 'Cinzel, serif', fontSize: '17px', color: '#D4AF37',
+      stroke: '#0A0A1E', strokeThickness: 2,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(101);
 
-    const pauseBtn = this.add.text(width - 20, height - 20, '\u23F8', { fontSize: '24px' })
-      .setOrigin(1, 1).setScrollFactor(0).setDepth(100).setInteractive();
+    // Combo text
+    this.comboText = this.add.text(width / 2, 28, '', {
+      fontFamily: 'Cinzel, serif', fontSize: '11px', color: '#FF6B35',
+      stroke: '#0A0A1E', strokeThickness: 1,
+    }).setOrigin(0.5, 0).setScrollFactor(0).setDepth(101).setAlpha(0);
+
+    // === HEALTH BAR (ornate) ===
+    const hx = width - 170, hy = 19;
+    const hbW = 100, hbH = 12;
+
+    // Health bar frame
+    const hbFrame = this.add.graphics().setScrollFactor(0).setDepth(101);
+    // Outer glow
+    hbFrame.fillStyle(COLORS.gold, 0.08);
+    hbFrame.fillRoundedRect(hx - 3, hy - hbH / 2 - 3, hbW + 6, hbH + 6, 4);
+    // Dark inner
+    hbFrame.fillStyle(0x0D0D2B, 0.9);
+    hbFrame.fillRoundedRect(hx, hy - hbH / 2, hbW, hbH, 3);
+    // Gold border
+    hbFrame.lineStyle(1.5, COLORS.gold, 0.7);
+    hbFrame.strokeRoundedRect(hx, hy - hbH / 2, hbW, hbH, 3);
+
+    // Health label
+    this.add.text(hx - 8, hy, '♥', {
+      fontSize: '12px', color: '#FF4444',
+    }).setOrigin(1, 0.5).setScrollFactor(0).setDepth(101);
+
+    this.healthBarBg = this.add.rectangle(hx + 2, hy, hbW - 4, hbH - 4, 0x222233).setOrigin(0, 0.5).setScrollFactor(0).setDepth(101);
+    this.healthBar = this.add.rectangle(hx + 2, hy, hbW - 4, hbH - 4, 0x44FF44).setOrigin(0, 0.5).setScrollFactor(0).setDepth(102);
+
+    // Health bar highlight line
+    this.healthBarHighlight = this.add.rectangle(hx + 2, hy - hbH / 2 + 3, hbW - 4, 2, 0xFFFFFF, 0.15).setOrigin(0, 0.5).setScrollFactor(0).setDepth(103);
+
+    // Spell indicator
+    this.spellIndicator = this.add.text(width - 16, 10, this.getSpellName(), {
+      fontFamily: 'Cinzel, serif', fontSize: '13px', color: this.getSpellColor(),
+      stroke: '#0A0A1E', strokeThickness: 2,
+    }).setOrigin(1, 0).setScrollFactor(0).setDepth(101);
+
+    // Pause button
+    const pauseBtn = this.add.text(width - 20, this.cameras.main.height - 20, '⏸', {
+      fontSize: '22px', stroke: '#000000', strokeThickness: 2,
+    }).setOrigin(1, 1).setScrollFactor(0).setDepth(101).setInteractive();
     pauseBtn.on('pointerdown', () => this.togglePause());
   }
 
   updateHealthBar() {
     const pct = this.player.health / GAME_CONFIG.player.health;
-    this.healthBar.width = 100 * Math.max(0, pct);
+    const barW = 96 * Math.max(0, pct);
+    this.healthBar.width = barW;
+    this.healthBarHighlight.width = barW;
     this.healthBar.fillColor = pct > 0.6 ? 0x44FF44 : pct > 0.3 ? 0xFFFF44 : 0xFF4444;
   }
 
@@ -271,8 +434,11 @@ export default class GameScene extends Phaser.Scene {
     const enemy = new Enemy(this, x, y, type);
     this.enemies.add(enemy);
 
-    const portal = this.add.circle(x, y, 5, COLORS.deepPurple, 0.8);
-    this.tweens.add({ targets: portal, scale: 3, alpha: 0, duration: 500, onComplete: () => portal.destroy() });
+    // Spawn portal effect
+    const portalOuter = this.add.circle(x, y, 3, COLORS.deepPurple, 0.9);
+    const portalGlow = this.add.circle(x, y, 3, COLORS.cyan, 0.3);
+    this.tweens.add({ targets: portalOuter, scale: 4, alpha: 0, duration: 600, onComplete: () => portalOuter.destroy() });
+    this.tweens.add({ targets: portalGlow, scale: 6, alpha: 0, duration: 700, onComplete: () => portalGlow.destroy() });
   }
 
   waveComplete() {
@@ -308,9 +474,39 @@ export default class GameScene extends Phaser.Scene {
 
   createAmbientEffects() {
     const { width, height } = this.cameras.main;
-    for (let i = 0; i < 8; i++) {
-      const m = this.add.circle(Phaser.Math.Between(50, width - 50), Phaser.Math.Between(50, height - 50), Phaser.Math.Between(2, 4), COLORS.cyan, 0.2).setDepth(0);
-      this.tweens.add({ targets: m, x: m.x + Phaser.Math.Between(-50, 50), y: m.y + Phaser.Math.Between(-30, 30), alpha: 0, duration: Phaser.Math.Between(3000, 5000), repeat: -1, yoyo: true, delay: Phaser.Math.Between(0, 2000) });
+
+    // Floating magical motes
+    for (let i = 0; i < 10; i++) {
+      const mx = Phaser.Math.Between(60, width - 60);
+      const my = Phaser.Math.Between(60, height - 60);
+      const color = i % 3 === 0 ? COLORS.gold : COLORS.cyan;
+      const m = this.add.circle(mx, my, Phaser.Math.Between(1, 3), color, 0.15).setDepth(0);
+      this.tweens.add({
+        targets: m,
+        x: mx + Phaser.Math.Between(-50, 50),
+        y: my + Phaser.Math.Between(-30, 30),
+        alpha: { from: 0.1, to: 0.3 },
+        duration: Phaser.Math.Between(3000, 6000),
+        repeat: -1, yoyo: true,
+        delay: Phaser.Math.Between(0, 2000),
+        ease: 'Sine.easeInOut',
+      });
+    }
+
+    // Slow twinkling stars in background
+    for (let i = 0; i < 6; i++) {
+      const s = this.add.circle(
+        Phaser.Math.Between(50, width - 50),
+        Phaser.Math.Between(50, height - 50),
+        1, COLORS.gold, 0).setDepth(0);
+      this.tweens.add({
+        targets: s,
+        alpha: { from: 0, to: Phaser.Math.FloatBetween(0.2, 0.5) },
+        duration: Phaser.Math.Between(600, 1500),
+        yoyo: true, repeat: -1,
+        delay: Phaser.Math.Between(0, 4000),
+        repeatDelay: Phaser.Math.Between(1500, 4000),
+      });
     }
   }
 
@@ -320,18 +516,48 @@ export default class GameScene extends Phaser.Scene {
     const { width, height } = this.cameras.main;
     if (this.isPaused) {
       this.physics.pause();
-      this.pauseOverlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.7).setScrollFactor(0).setDepth(200);
-      this.pauseTitle = this.add.text(width / 2, height / 2 - 40, 'PAUSED', { fontFamily: 'Cinzel, serif', fontSize: '32px', color: '#D4AF37' }).setOrigin(0.5).setScrollFactor(0).setDepth(201);
-      this.resumeBtn = this.add.text(width / 2, height / 2 + 10, 'Continue', { fontFamily: 'Cinzel, serif', fontSize: '20px', color: '#4ECDC4' }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setInteractive();
+      this.pauseOverlay = this.add.rectangle(width / 2, height / 2, width, height, 0x000000, 0.75).setScrollFactor(0).setDepth(200);
+
+      // Ornate pause panel
+      const panelW = 250, panelH = 160;
+      this.pausePanel = this.add.graphics().setScrollFactor(0).setDepth(201);
+      this.pausePanel.fillStyle(0x0A0A1E, 0.95);
+      this.pausePanel.fillRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 10);
+      this.pausePanel.lineStyle(2, COLORS.gold, 0.7);
+      this.pausePanel.strokeRoundedRect(width / 2 - panelW / 2, height / 2 - panelH / 2, panelW, panelH, 10);
+      this.pausePanel.lineStyle(1, COLORS.gold, 0.2);
+      this.pausePanel.strokeRoundedRect(width / 2 - panelW / 2 + 4, height / 2 - panelH / 2 + 4, panelW - 8, panelH - 8, 7);
+
+      this.pauseTitle = this.add.text(width / 2, height / 2 - 45, 'PAUSED', {
+        fontFamily: 'Cinzel, serif', fontSize: '28px', color: '#D4AF37',
+        stroke: '#0A0A1E', strokeThickness: 3,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(202);
+
+      this.resumeBtn = this.add.text(width / 2, height / 2 + 5, 'Continue', {
+        fontFamily: 'Cinzel, serif', fontSize: '18px', color: '#4ECDC4',
+        stroke: '#0A0A1E', strokeThickness: 2,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(202).setInteractive();
+      this.resumeBtn.on('pointerover', () => this.resumeBtn.setColor('#6FFFEE'));
+      this.resumeBtn.on('pointerout', () => this.resumeBtn.setColor('#4ECDC4'));
       this.resumeBtn.on('pointerdown', () => this.togglePause());
-      this.quitBtn = this.add.text(width / 2, height / 2 + 50, 'Abandon', { fontFamily: 'Cinzel, serif', fontSize: '16px', color: '#FF6B35' }).setOrigin(0.5).setScrollFactor(0).setDepth(201).setInteractive();
+
+      this.quitBtn = this.add.text(width / 2, height / 2 + 42, 'Abandon', {
+        fontFamily: 'Cinzel, serif', fontSize: '14px', color: '#FF6B35',
+        stroke: '#0A0A1E', strokeThickness: 2,
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(202).setInteractive();
+      this.quitBtn.on('pointerover', () => this.quitBtn.setColor('#FF9955'));
+      this.quitBtn.on('pointerout', () => this.quitBtn.setColor('#FF6B35'));
       this.quitBtn.on('pointerdown', () => {
         this.cameras.main.fadeOut(500);
         this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('MenuScene'));
       });
     } else {
       this.physics.resume();
-      this.pauseOverlay?.destroy(); this.pauseTitle?.destroy(); this.resumeBtn?.destroy(); this.quitBtn?.destroy();
+      this.pauseOverlay?.destroy();
+      this.pausePanel?.destroy();
+      this.pauseTitle?.destroy();
+      this.resumeBtn?.destroy();
+      this.quitBtn?.destroy();
     }
     telegram.hapticFeedback('impact');
   }
