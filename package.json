@@ -1,7 +1,7 @@
 {
-  "name": "arcane-survival",
+  "name": "dreamlight-valley",
   "version": "1.0.0",
-  "description": "A magical survival arena game for Telegram Mini Apps",
+  "description": "A cozy fantasy village builder for Telegram Mini Apps",
   "type": "module",
   "scripts": {
     "dev": "vite",

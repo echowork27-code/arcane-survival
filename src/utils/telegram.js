@@ -1,57 +1,58 @@
-// Telegram Web App Integration
-class TelegramManager {
-  constructor() {
-    this.webapp = window.Telegram?.WebApp;
-    this.isAvailable = !!this.webapp;
-    this.userName = null;
-    this.userId = null;
-    if (this.isAvailable) this._init();
+// Telegram WebApp Integration
+const tg = window.Telegram?.WebApp;
+
+export function initTelegram() {
+  if (tg) {
+    tg.expand();
+    tg.ready();
+    tg.disableVerticalSwipes?.();
+    tg.setHeaderColor?.('#2d1b4e');
+    tg.setBackgroundColor?.('#1a1a3e');
   }
-  _init() {
-    const wa = this.webapp;
-    wa.expand();
-    try { wa.setHeaderColor('#1A0A2E'); } catch {}
-    try { wa.setBackgroundColor('#0D0D2B'); } catch {}
-    try { wa.ready(); } catch {}
-    try { wa.disableVerticalSwipes?.(); } catch {}
-    try { wa.requestFullscreen?.(); } catch {}
-    const user = wa.initDataUnsafe?.user;
-    this.userName = user?.first_name || user?.username || null;
-    this.userId   = user?.id || null;
-  }
-  getUserName()  { return this.userName || 'Apprentice'; }
-  getUserId()    { return this.userId   || 'guest'; }
-  hapticImpact(s = 'medium') { try { this.webapp?.HapticFeedback?.impactOccurred(s); } catch {} }
-  hapticNotify(t = 'success'){ try { this.webapp?.HapticFeedback?.notificationOccurred(t); } catch {} }
-  hapticSelect()             { try { this.webapp?.HapticFeedback?.selectionChanged(); } catch {} }
-  hapticFeedback(type = 'medium') {
-    switch (type) {
-      case 'light': case 'medium': case 'heavy':
-        this.hapticImpact(type); break;
-      case 'success': case 'error': case 'warning':
-        this.hapticNotify(type); break;
-      case 'impact':
-        this.hapticImpact('medium'); break;
-      default:
-        this.hapticSelect(); break;
-    }
-  }
-  shareScore(score, wave) {
-    if (!this.isAvailable) return;
-    const t = `⚔️ I survived ${wave} waves and scored ${score} in Arcane Survival! Can you surpass me?`;
-    try { this.webapp.switchInlineQuery(t, ['users','groups','channels']); } catch {}
-  }
-  showBackButton(cb) { try { this.webapp?.BackButton?.show(); this.webapp?.BackButton?.onClick(cb); } catch {} }
-  hideBackButton()   { try { this.webapp?.BackButton?.hide(); this.webapp?.BackButton?.offClick?.(); } catch {} }
-  showConfirm(msg, cb) {
-    if (this.isAvailable && this.webapp.showConfirm) this.webapp.showConfirm(msg, cb);
-    else cb(confirm(msg));
-  }
-  showAlert(msg) {
-    if (this.isAvailable && this.webapp.showAlert) this.webapp.showAlert(msg);
-    else alert(msg);
-  }
-  close() { try { this.webapp?.close(); } catch {} }
 }
-export const telegram = new TelegramManager();
-export default telegram;
+
+export function getUserName() {
+  if (tg?.initDataUnsafe?.user) {
+    const u = tg.initDataUnsafe.user;
+    return u.first_name || u.username || 'Adventurer';
+  }
+  return 'Adventurer';
+}
+
+export function getUserId() {
+  return tg?.initDataUnsafe?.user?.id || 'local';
+}
+
+export function hapticFeedback(type = 'light') {
+  try {
+    if (tg?.HapticFeedback) {
+      switch (type) {
+        case 'light':
+          tg.HapticFeedback.impactOccurred('light');
+          break;
+        case 'medium':
+          tg.HapticFeedback.impactOccurred('medium');
+          break;
+        case 'heavy':
+          tg.HapticFeedback.impactOccurred('heavy');
+          break;
+        case 'success':
+          tg.HapticFeedback.notificationOccurred('success');
+          break;
+        case 'error':
+          tg.HapticFeedback.notificationOccurred('error');
+          break;
+        case 'warning':
+          tg.HapticFeedback.notificationOccurred('warning');
+          break;
+        case 'select':
+          tg.HapticFeedback.selectionChanged();
+          break;
+      }
+    }
+  } catch (e) { /* ignore */ }
+}
+
+export function isTelegram() {
+  return !!tg?.initData;
+}
