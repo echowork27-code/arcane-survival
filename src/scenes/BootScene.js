@@ -105,7 +105,18 @@ export default class BootScene extends Phaser.Scene {
     g.fillStyle(COLORS.deepPurple, 0.6); g.fillCircle(40, 40, 40);
     g.lineStyle(3, COLORS.gold, 0.8); g.strokeCircle(40, 40, 38);
     g.lineStyle(2, COLORS.cyan, 0.6); g.strokeCircle(40, 40, 26);
-    g.fillStyle(COLORS.cyan, 0.8); g.fillStar(40, 40, 5, 12, 6);
+    // Draw a 5-pointed star manually (fillStar doesn't exist in Phaser 3.90)
+    g.fillStyle(COLORS.cyan, 0.8);
+    g.beginPath();
+    for (let i = 0; i < 10; i++) {
+      const r = i % 2 === 0 ? 12 : 6;
+      const angle = (i * Math.PI / 5) - Math.PI / 2;
+      const px = 40 + Math.cos(angle) * r;
+      const py = 40 + Math.sin(angle) * r;
+      if (i === 0) g.moveTo(px, py); else g.lineTo(px, py);
+    }
+    g.closePath();
+    g.fillPath();
     g.generateTexture('attack_button', 80, 80); g.destroy();
 
     // Spell pickup
