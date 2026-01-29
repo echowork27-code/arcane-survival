@@ -1,0 +1,17 @@
+{
+  "name": "arcane-survival",
+  "version": "1.0.0",
+  "description": "A magical survival arena game for Telegram Mini Apps",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.70.0"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+}
