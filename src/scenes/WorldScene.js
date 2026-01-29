@@ -7,6 +7,7 @@ import { QUESTS, DAILY_TASKS } from '../data/quests.js';
 import { GridManager } from '../utils/GridManager.js';
 import { loadGame, saveGame, addItem, removeItem, hasItem, addCoins, spendCoins } from '../utils/SaveManager.js';
 import { hapticFeedback, getUserName } from '../utils/telegram.js';
+import Joystick from '../ui/Joystick.js';
 
 export default class WorldScene extends Phaser.Scene {
   constructor() {
@@ -62,6 +63,13 @@ export default class WorldScene extends Phaser.Scene {
 
     // Input
     this.setupInput();
+
+    // Joystick
+    this.joystick = new Joystick(this);
+
+    // Camera zoom
+    this.cameraZoom = 1.0;
+    this.createZoomControls();
 
     // HUD
     this.createHUD();
@@ -958,15 +966,63 @@ export default class WorldScene extends Phaser.Scene {
     this.keys = this.input.keyboard.addKeys('W,A,S,D,I,B,Q,ESC');
   }
 
+  createZoomControls() {
+    const btnSize = 32;
+    const margin = 12;
+    const rightX = GAME_W - margin - btnSize / 2;
+    const baseY = GAME_H - 180;
+
+    // Zoom levels: 0=far(top), 1=default, 2=close
+    this.zoomLevels = [0.6, 1.0, 1.5];
+    this.zoomIndex = 1;
+
+    const zoomLabels = ['🗺', '👁', '🔍'];
+    const zoomTips = ['Top View', 'Normal', 'Close Up'];
+
+    this.zoomBtns = [];
+    for (let i = 0; i < 3; i++) {
+      const y = baseY + i * (btnSize + 8);
+      const bg = this.add.circle(rightX, y, btnSize / 2, COLORS.uiBg, 0.7)
+        .setScrollFactor(0).setDepth(1500)
+        .setStrokeStyle(i === this.zoomIndex ? 2 : 1, COLORS.uiAccent, i === this.zoomIndex ? 0.9 : 0.4)
+        .setInteractive();
+
+      const label = this.add.text(rightX, y, zoomLabels[i], {
+        fontSize: '16px',
+      }).setOrigin(0.5).setScrollFactor(0).setDepth(1501);
+
+      bg.on('pointerdown', () => {
+        hapticFeedback('light');
+        this.zoomIndex = i;
+        this.cameraZoom = this.zoomLevels[i];
+        this.tweens.add({
+          targets: this.cameras.main,
+          zoom: this.cameraZoom,
+          duration: 300,
+          ease: 'Sine.easeInOut',
+        });
+        // Update button styles
+        this.zoomBtns.forEach((btn, idx) => {
+          btn.setStrokeStyle(idx === i ? 2 : 1, COLORS.uiAccent, idx === i ? 0.9 : 0.4);
+        });
+      });
+
+      this.zoomBtns.push(bg);
+    }
+  }
+
   update(time, delta) {
-    // Keyboard movement
-    let dx = 0, dy = 0;
+    // Joystick movement
+    let dx = this.joystick.forceX;
+    let dy = this.joystick.forceY;
+
+    // Keyboard movement (adds to joystick)
     if (this.cursors.left.isDown || this.keys.A.isDown) dx = -1;
     if (this.cursors.right.isDown || this.keys.D.isDown) dx = 1;
     if (this.cursors.up.isDown || this.keys.W.isDown) dy = -1;
     if (this.cursors.down.isDown || this.keys.S.isDown) dy = 1;
 
-    if ((dx !== 0 || dy !== 0) && !this.dialogActive) {
+    if ((Math.abs(dx) > 0.1 || Math.abs(dy) > 0.1) && !this.dialogActive && !this.menuOpen) {
       if (this.moveTween) this.moveTween.stop();
       this.playerMoving = false;
 
@@ -979,8 +1035,8 @@ export default class WorldScene extends Phaser.Scene {
         this.player.x = newX;
         this.player.y = newY;
         this.player.setDepth(this.player.y + 16);
-        if (dx < 0) this.player.setFlipX(true);
-        else if (dx > 0) this.player.setFlipX(false);
+        if (dx < -0.1) this.player.setFlipX(true);
+        else if (dx > 0.1) this.player.setFlipX(false);
       }
     }
 
