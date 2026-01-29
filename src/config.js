@@ -8,6 +8,9 @@ export const COLORS = {
   red: 0xFF4444,
   orange: 0xFF8844,
   blue: 0x4488FF,
+  accent: 0x4ECDC4,
+  textLight: '#E8D5B5',
+  panelBg: 0x1A0A2E,
   hex: {
     deepPurple: "#2D1B4E",
     darkBlue: "#1A1A3E",

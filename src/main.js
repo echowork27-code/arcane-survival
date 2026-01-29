@@ -28,6 +28,13 @@ const config = {
   render: { pixelArt: false, antialias: true },
 };
 
+window.gameState = {
+  playerName: telegram.getUserName(),
+  highScore: parseInt(localStorage.getItem('arcane_highscore') || '0'),
+  codexUnlocked: JSON.parse(localStorage.getItem('arcane_lore') || '[]'),
+  hasSeenIntro: !!localStorage.getItem('arcane_intro_seen'),
+};
+
 const game = new Phaser.Game(config);
 game.telegram = telegram;
 
