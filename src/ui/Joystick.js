@@ -4,7 +4,7 @@ import { COLORS } from '../config.js';
 export default class Joystick {
   constructor(scene) {
     this.scene = scene;
-    this.baseX = 80;
+    this.baseX = 320; // right side
     this.baseY = 0; // set dynamically
     this.radius = 40;
     this.forceX = 0;
@@ -23,7 +23,7 @@ export default class Joystick {
     this.dot = scene.add.circle(0, 0, 5, COLORS.uiAccent, 0.9)
       .setScrollFactor(0).setDepth(1502);
 
-    // Touch zone (left third of screen)
+    // Touch zone (right half of screen)
     this.zone = scene.add.zone(0, 0, 0, 0)
       .setOrigin(0, 0).setScrollFactor(0).setDepth(1499).setInteractive();
 
@@ -40,15 +40,16 @@ export default class Joystick {
   updatePosition() {
     const h = this.scene.scale.height || 720;
     const w = this.scene.scale.width || 400;
-    this.baseY = h - 130;
+    this.baseX = w - 80;
+    this.baseY = h - 150;
 
     this.base.setPosition(this.baseX, this.baseY);
     this.thumb.setPosition(this.baseX, this.baseY);
     this.dot.setPosition(this.baseX, this.baseY);
 
-    // Touch zone covers left half, bottom portion
-    this.zone.setPosition(0, h * 0.4);
-    this.zone.setSize(w * 0.45, h * 0.5);
+    // Touch zone covers right half, bottom portion
+    this.zone.setPosition(w * 0.5, h * 0.3);
+    this.zone.setSize(w * 0.5, h * 0.65);
   }
 
   onDown(pointer) {
@@ -100,8 +101,9 @@ export default class Joystick {
 
     // Reset position
     const h = this.scene.scale.height || 720;
-    this.baseX = 80;
-    this.baseY = h - 130;
+    const w = this.scene.scale.width || 400;
+    this.baseX = w - 80;
+    this.baseY = h - 150;
 
     this.base.setPosition(this.baseX, this.baseY);
     this.thumb.setPosition(this.baseX, this.baseY);

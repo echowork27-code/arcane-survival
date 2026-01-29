@@ -948,6 +948,9 @@ export default class WorldScene extends Phaser.Scene {
   setupInput() {
     this.input.on('pointerdown', (pointer) => {
       if (this.dialogActive || this.menuOpen) return;
+      // Don't tap-to-move if joystick is active or pointer is on right half (joystick zone)
+      if (this.joystick && this.joystick.isActive) return;
+      if (pointer.x > GAME_W * 0.5 && pointer.y > GAME_H * 0.3) return;
 
       const worldX = pointer.worldX;
       const worldY = pointer.worldY;
@@ -969,8 +972,8 @@ export default class WorldScene extends Phaser.Scene {
   createZoomControls() {
     const btnSize = 32;
     const margin = 12;
-    const rightX = GAME_W - margin - btnSize / 2;
-    const baseY = GAME_H - 180;
+    const leftX = margin + btnSize / 2;
+    const baseY = GAME_H - 200;
 
     // Zoom levels: 0=far(top), 1=default, 2=close
     this.zoomLevels = [0.6, 1.0, 1.5];
@@ -982,12 +985,12 @@ export default class WorldScene extends Phaser.Scene {
     this.zoomBtns = [];
     for (let i = 0; i < 3; i++) {
       const y = baseY + i * (btnSize + 8);
-      const bg = this.add.circle(rightX, y, btnSize / 2, COLORS.uiBg, 0.7)
+      const bg = this.add.circle(leftX, y, btnSize / 2, COLORS.uiBg, 0.7)
         .setScrollFactor(0).setDepth(1500)
         .setStrokeStyle(i === this.zoomIndex ? 2 : 1, COLORS.uiAccent, i === this.zoomIndex ? 0.9 : 0.4)
         .setInteractive();
 
-      const label = this.add.text(rightX, y, zoomLabels[i], {
+      const label = this.add.text(leftX, y, zoomLabels[i], {
         fontSize: '16px',
       }).setOrigin(0.5).setScrollFactor(0).setDepth(1501);
 
