@@ -4,8 +4,8 @@ export const MAP_COLS = 50;
 export const MAP_ROWS = 40;
 export const WORLD_W = MAP_COLS * TILE_SIZE; // 1600
 export const WORLD_H = MAP_ROWS * TILE_SIZE; // 1280
-export const GAME_W = 800;
-export const GAME_H = 600;
+export const GAME_W = 400;
+export const GAME_H = 720;
 
 // Day/night cycle duration in ms (5 minutes = 1 full day)
 export const DAY_DURATION = 300000;
